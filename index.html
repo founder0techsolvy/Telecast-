@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JNV Silver Jubilee - Video Submission</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+        import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAwB8JWKIRK6Bkat-NdM6OyVAvdrBk5cmM",
+            authDomain: "capturedeep-126bf.firebaseapp.com",
+            databaseURL: "https://capturedeep-126bf-default-rtdb.firebaseio.com",
+            projectId: "capturedeep-126bf",
+            storageBucket: "capturedeep-126bf.appspot.com",
+            messagingSenderId: "527347157327",
+            appId: "1:527347157327:web:d7db7bb6d0fe021547dd3a",
+            measurementId: "G-VZEFR8X5BN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const storage = getStorage(app);
+        const db = getFirestore(app);
+
+        window.firebaseApp = app;
+        window.firebaseStorage = storage;
+        window.firebaseDb = db;
+        window.storageRef = ref;
+        window.uploadBytesResumable = uploadBytesResumable;
+        window.getDownloadURL = getDownloadURL;
+        window.firestoreCollection = collection;
+        window.addDoc = addDoc;
+        window.serverTimestamp = serverTimestamp;
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes upload {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+        .upload-animation {
+            animation: upload 1.5s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spin-animation {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+        }
+        .slide-in {
+            animation: slideIn 0.4s ease-out;
+        }
+        .slide-out {
+            animation: slideOut 0.4s ease-out;
+        }
+        @keyframes successPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .success-pop {
+            animation: successPop 0.5s ease-out;
+        }
+        .gradient-orange {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+        }
+        .gradient-green {
+            background: linear-gradient(135deg, #2d5016 0%, #4a7c2c 100%);
+        }
+        .gradient-yellow {
+            background: linear-gradient(135deg, #f4a261 0%, #e9c46a 100%);
+        }
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-green-50">
+    
+    <!-- Upload Progress Modal -->
+    <div id="uploadModal" class="hidden fixed inset-0 z-50 modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 transform slide-in">
+                <div class="text-center mb-6">
+                    <div class="upload-animation inline-block">
+                        <svg class="w-20 h-20 text-orange-600 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-1xl font-bold text-gray-800 mt-4">Bhaiya/Didi <br> Uploading Your Video</h3>
+                    <p class="text-gray-600 mt-2">Please wait while we upload your precious memories...</p>
+                    <p class="text-sm text-orange-600 font-semibold mt-1">⚠️ Don't close this page</p>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="flex justify-between text-sm text-gray-700 font-semibold">
+                        <span>Progress</span>
+                        <span id="modalProgressPercent" class="text-orange-600 text-2xl">0%</span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden shadow-inner">
+                        <div id="modalProgressFill" class="gradient-orange h-6 rounded-full transition-all duration-300 relative flex items-center justify-end pr-2" style="width: 0%">
+                            <div class="absolute inset-0 bg-white opacity-20 animate-pulse"></div>
+                            <span class="text-white text-xs font-bold relative z-10" id="modalProgressText">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mt-6">
+                        <div class="bg-orange-50 rounded-xl p-4 text-center">
+                            <p class="text-sm text-gray-600">Uploaded</p>
+                            <p class="text-xl font-bold text-orange-600" id="modalUploadedSize">0 MB</p>
+                        </div>
+                        <div class="bg-green-50 rounded-xl p-4 text-center">
+                            <p class="text-sm text-gray-600">Total Size</p>
+                            <p class="text-xl font-bold text-green-600" id="modalTotalSize">0 MB</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
+                        <p class="text-sm text-gray-600">Upload Speed</p>
+                        <p class="text-2xl font-bold text-yellow-700" id="modalUploadSpeed">Calculating...</p>
+                    </div>
+
+                    <div class="mt-6 p-4 bg-blue-50 rounded-xl">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            <p class="text-sm text-blue-800">Your video is being securely uploaded to our servers. This may take a few moments depending on your video size and internet connection.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 transform success-pop">
+                <div class="text-center">
+                    <div class="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6">
+                        <svg class="w-16 h-16 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    
+                    <h3 class="text-3xl font-bold text-gray-800 mb-3">Successfully Submitted! 🎉</h3>
+                    <p class="text-lg text-gray-600 mb-4">Thank you for sharing your precious memories!</p>
+                    
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 mb-6">
+                        <p class="text-green-800 font-semibold mb-2">Bhaiya/Didi <br> Your video has been received</p>
+                        <p class="text-sm text-green-700">We'll review it and include it in the Silver Jubilee celebration on December 21, 2025.</p>
+                    </div>
+
+                    <div class="space-y-3 text-sm text-gray-600 mb-6">
+                        <div class="flex items-center gap-2 justify-center">
+                            <svg class="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                            </svg>
+                            <span>Bhaiya/Didi <br> You'll receive a confirmation note shortly</span>
+                        </div>
+                    </div>
+
+                    <button onclick="closeSuccessModal()" class="w-full gradient-orange text-white font-bold py-4 rounded-xl hover:shadow-xl transition-all">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="hidden fixed inset-0 z-50 modal-backdrop">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 transform success-pop">
+                <div class="text-center">
+                    <div class="inline-flex items-center justify-center w-24 h-24 bg-red-100 rounded-full mb-6">
+                        <svg class="w-16 h-16 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    
+                    <h3 class="text-3xl font-bold text-gray-800 mb-3">Oops! Something Went Wrong</h3>
+                    <p class="text-lg text-red-600 font-semibold mb-4" id="modalErrorText"></p>
+                    
+                    <div class="bg-red-50 border-2 border-red-200 rounded-xl p-6 mb-6">
+                        <p class="text-sm text-red-800">Please try again or contact our support team for assistance.</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button onclick="closeErrorModal()" class="w-full gradient-orange text-white font-bold py-4 rounded-xl hover:shadow-xl transition-all">
+                            Try Again
+                        </button>
+                        <a href="tel:9839407909" class="block w-full bg-green-600 text-white font-bold py-4 rounded-xl hover:bg-green-700 transition-all">
+                            📞 Call Support: 9839407909
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <div class="gradient-orange text-white shadow-2xl">
+        <div class="max-w-6xl mx-auto px-4 py-8">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div class="flex items-center gap-6">
+                    <img src="data:image/jpeg;base64,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" alt="JNV Logo" class="w-20 h-20 bg-white rounded-full p-2 shadow-lg">
+                    <div>
+                        <h1 class="text-2xl font-bold mb-1">Alumini Meet 2025</h1>
+                        <p class="text-orange-100 text-lg">JNV SIDDHARTH NAGAR</p>
+                        <p class="text-yellow-200 text-sm mt-2 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                            </svg>
+                            Silver Jubilee - December 21, 2025
+                        </p>
+                    </div>
+                </div>
+                <div class="text-center pulse-animation">
+                    <div class="gradient-yellow text-orange-900 px-8 py-4 rounded-xl font-bold text-2xl shadow-lg border-4 border-orange-600">
+                        25 Years
+                    </div>
+                    <p class="text-yellow-100 text-sm mt-2 font-semibold">of Excellence</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="bg-white shadow-md border-b-4 border-orange-400 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="flex gap-6">
+                <a href="#" class="px-6 py-4 font-semibold text-orange-600 border-b-4 border-orange-600">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        Submit Video
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
+            <!-- Guidelines -->
+            <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-orange-600 p-6 rounded-xl mb-8 shadow-md animate-fade-in">
+                <h3 class="font-bold text-orange-900 mb-4 text-xl flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                    </svg>
+                    Video Submission Guidelines
+                </h3>
+                <ul class="space-y-2 text-orange-900">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold text-lg">✓</span>
+                        <span>Video duration: <strong>Minimum 2 minutes, Maximum 5 minutes</strong></span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold text-lg">✓</span>
+                        <span>No file size limit - <strong>Upload any size video!</strong></span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold text-lg">✓</span>
+                        <span>Record in <strong>landscape/horizontal mode</strong></span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold text-lg">✓</span>
+                        <span>Share your <strong>memories and message for juniors</strong></span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold text-lg">✓</span>
+                        <span>Ensure <strong>clear audio quality</strong></span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Form -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8 border-t-4 border-orange-400 animate-fade-in">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">Submit Your Video Message</h2>
+
+                <form id="submissionForm" class="space-y-6">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="name" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none transition-all"
+                            placeholder="Your full name">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            Batch/Passing Year <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="batch" required
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none transition-all"
+                            placeholder="e.g., 2000 or 1998-2000">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Email</label>
+                        <input type="email" id="email"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none transition-all"
+                            placeholder="your.email@example.com">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Phone Number</label>
+                        <input type="tel" id="phone"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none transition-all"
+                            placeholder="+91 XXXXX XXXXX">
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">Brief Message (Optional)</label>
+                        <textarea id="message" rows="3"
+                            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none transition-all"
+                            placeholder="Any text message you'd like to share..."></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-2">
+                            Upload Video <span class="text-red-500">*</span>
+                        </label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-orange-500 transition-all cursor-pointer" id="uploadArea">
+                            <input type="file" id="videoInput" accept="video/*" required class="hidden">
+                            <label for="videoInput" class="cursor-pointer">
+                                <svg class="w-16 h-16 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-gray-600 font-semibold mb-1" id="fileName">Click to upload video</p>
+                                <p class="text-sm text-gray-500">MP4, MOV, AVI (No size limit)</p>
+                                <p class="text-xs text-gray-400 mt-2" id="videoDuration"></p>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn"
+                        class="w-full gradient-orange hover:shadow-2xl text-white font-bold py-4 rounded-lg transition-all shadow-lg flex items-center justify-center gap-2 transform hover:scale-105">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        Submit Video
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+<style>
+    .contact-card {
+        transition: transform .3s ease, box-shadow .3s ease;
+    }
+    .contact-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 28px rgba(0,0,0,.12);
+    }
+</style>
+</head>
+
+<body class="bg-gray-50 p-6 md:p-10">
+
+<!-- OUTER BORDERED SECTION -->
+<div class="max-w-6xl mx-auto border border-gray-200 rounded-3xl p-8 bg-white shadow-md">
+
+    <!-- Heading -->
+    <div class="text-center mb-12">
+        <h2 class="text-4xl font-bold text-gray-800">Need Help?</h2>
+        <div class="w-24 h-[3px] bg-gray-800 mx-auto mt-3 mb-4 rounded-full"></div>
+        <p class="text-gray-600 text-lg">Connect with our support team</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+
+        <!-- Card 1 -->
+        <div class="contact-card bg-gray-50 rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+
+            <div class="p-6 text-center">
+                <!-- ROUND IMAGE -->
+                <img src="avi.png"
+                     alt="Avinash Mishra"
+                     class="w-28 h-28 mx-auto rounded-full border-4 border-gray-300 object-cover mb-4">
+
+                <h3 class="text-2xl font-bold text-gray-800">Avinash Mishra</h3>
+                <p class="text-gray-500 font-medium">TeleCast Volunteer <br> (IX 'A')</p>
+<p>+91 9839407909</p>
+            </div>
+
+            <div class="pb-6 text-center">
+
+                <a href="https://wa.me/919839407909?text=Hello%20Avinash%2C%20I%20need%20help%20with%20TeleCast"
+                   target="_blank"
+                   class="inline-block">
+
+                    <img src="https://founder0techsolvy.github.io/Imgsparsh/wa.png"
+                         alt="WhatsApp"
+                         class="w-14 h-14 mx-auto hover:scale-110 transition">
+                </a>
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="contact-card bg-gray-50 rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+
+            <div class="p-6 text-center">
+                <!-- ROUND IMAGE -->
+                <img src="ankit.png"
+                     alt="Ankit Singh"
+                     class="w-28 h-28 mx-auto rounded-full border-4 border-gray-300 object-cover mb-4">
+
+                <h3 class="text-2xl font-bold text-gray-800">Ankit Singh</h3>
+                <p class="text-gray-500 font-medium">Event Manager <br> (2005-12)</p>
+               <p>+91 77050 93111</p> 
+            </div>
+
+            <div class="pb-6 text-center">
+                <a href="https://wa.me/917705093111?text=Hello%20Ankit%2C%20I%20need%20help%20with%20TeleCast"
+                   target="_blank"
+                   class="inline-block">
+
+                    <img src="https://founder0techsolvy.github.io/Imgsparsh/wa.png"
+                         alt="WhatsApp"
+                         class="w-14 h-14 mx-auto hover:scale-110 transition">
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+    <!-- Footer -->
+    <div class="gradient-green text-white py-8 mt-12">
+        <div class="max-w-6xl mx-auto px-4 text-center">
+            <p class="text-lg font-semibold">© 2025 Jawahar Navodaya Vidyalaya Siddharth Nagar <br>- Silver Jubilee Celebration</p>
+            <p class="text-sm text-green-100 mt-2">Celebrating 25 Years of Excellence | ज्ञान, कर्तव्य, एकता</p>
+            <p class="text-xs text-green-200 mt-4">Developer: Avinash Mishra (IX 'A') | Contact: 9839407909</p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('submissionForm');
+        const videoInput = document.getElementById('videoInput');
+        const fileName = document.getElementById('fileName');
+        const videoDuration = document.getElementById('videoDuration');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        const uploadModal = document.getElementById('uploadModal');
+        const modalProgressFill = document.getElementById('modalProgressFill');
+        const modalProgressPercent = document.getElementById('modalProgressPercent');
+        const modalProgressText = document.getElementById('modalProgressText');
+        const modalUploadSpeed = document.getElementById('modalUploadSpeed');
+        const modalUploadedSize = document.getElementById('modalUploadedSize');
+        const modalTotalSize = document.getElementById('modalTotalSize');
+        
+        const successModal = document.getElementById('successModal');
+        const errorModal = document.getElementById('errorModal');
+        const modalErrorText = document.getElementById('modalErrorText');
+
+        let selectedFile = null;
+        let startTime = null;
+
+        videoInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('video/')) {
+                showErrorModal('Please upload a video file (MP4, MOV, AVI, etc.)');
+                videoInput.value = '';
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            
+            // Check video duration
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.src = URL.createObjectURL(file);
+            
+            video.onloadedmetadata = function() {
+                const duration = Math.floor(video.duration);
+                URL.revokeObjectURL(video.src);
+                
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                videoDuration.textContent = `Duration: ${minutes}m ${seconds}s`;
+                
+                if (duration < 120 || duration > 300) {
+                    showErrorModal(`Video duration must be between 2 minutes and 5 minutes. Your video is ${minutes}m ${seconds}s.`);
+                    videoDuration.classList.add('text-red-500');
+                    selectedFile = null;
+                } else {
+                    videoDuration.classList.remove('text-red-500');
+                    videoDuration.classList.add('text-green-600');
+                }
+            };
+        });
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value.trim();
+            const batch = document.getElementById('batch').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!name || !batch || !selectedFile) {
+                showErrorModal('Please fill all required fields and upload a video');
+                return;
+            }
+
+            // Check Firebase initialization
+            if (!window.firebaseStorage || !window.firebaseDb) {
+                showErrorModal('Firebase is not configured. Please contact support.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<svg class="w-5 h-5 spin-animation inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" stroke="currentColor" class="opacity-25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path></svg> <span class="ml-2">Preparing...</span>';
+            
+            // Show upload modal
+            uploadModal.classList.remove('hidden');
+
+            try {
+                startTime = Date.now();
+                const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
+                modalTotalSize.textContent = `${fileSizeMB} MB`;
+
+                // Upload to Firebase Storage
+                const timestamp = Date.now();
+                const storageReference = window.storageRef(window.firebaseStorage, `videos/${timestamp}_${selectedFile.name}`);
+                const uploadTask = window.uploadBytesResumable(storageReference, selectedFile);
+
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        const uploadedMB = (snapshot.bytesTransferred / (1024 * 1024)).toFixed(2);
+                        
+                        modalProgressFill.style.width = progress + '%';
+                        modalProgressPercent.textContent = Math.round(progress) + '%';
+                        modalProgressText.textContent = Math.round(progress) + '%';
+                        modalUploadedSize.textContent = `${uploadedMB} MB`;
+
+                        // Calculate upload speed
+                        const elapsedTime = (Date.now() - startTime) / 1000;
+                        const speed = (snapshot.bytesTransferred / (1024 * 1024)) / elapsedTime;
+                        modalUploadSpeed.textContent = `${speed.toFixed(2)} MB/s`;
+                    },
+                    (error) => {
+                        console.error('Upload error:', error);
+                        uploadModal.classList.add('hidden');
+                        showErrorModal('Upload failed: ' + error.message);
+                        resetSubmitButton();
+                    },
+                    async () => {
+                        // Upload completed
+                        const downloadURL = await window.getDownloadURL(uploadTask.snapshot.ref);
+
+                        // Save metadata to Firestore
+                        const submissionData = {
+                            name: name,
+                            batch: batch,
+                            email: email || null,
+                            phone: phone || null,
+                            message: message || null,
+                            videoURL: downloadURL,
+                            videoName: selectedFile.name,
+                            videoSize: fileSizeMB + ' MB',
+                            submittedAt: window.serverTimestamp(),
+                            status: 'pending'
+                        };
+
+                        await window.addDoc(window.firestoreCollection(window.firebaseDb, 'submissions'), submissionData);
+
+                        // Hide upload modal and show success
+                        uploadModal.classList.add('hidden');
+                        showSuccessModal();
+                        
+                        // Reset form
+                        form.reset();
+                        fileName.textContent = 'Click to upload video';
+                        videoDuration.textContent = '';
+                        selectedFile = null;
+                        resetSubmitButton();
+                    }
+                );
+
+            } catch (error) {
+                console.error('Submission error:', error);
+                uploadModal.classList.add('hidden');
+                showErrorModal('Submission failed: ' + error.message);
+                resetSubmitButton();
+            }
+        });
+
+        function showErrorModal(msg) {
+            modalErrorText.textContent = msg;
+            errorModal.classList.remove('hidden');
+        }
+
+        function closeErrorModal() {
+            errorModal.classList.add('hidden');
+        }
+
+        function showSuccessModal() {
+            successModal.classList.remove('hidden');
+        }
+
+        function closeSuccessModal() {
+            successModal.classList.add('hidden');
+        }
+
+        function resetSubmitButton() {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> Submit Video';
+        }
+
+        window.closeSuccessModal = closeSuccessModal;
+        window.closeErrorModal = closeErrorModal;
+    </script>
+
+</body>
+</html>
